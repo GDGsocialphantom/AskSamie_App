@@ -1,0 +1,112 @@
+[
+  {
+    "month": "2026-01",
+    "sales": 9025.37,
+    "orderCount": 65,
+    "topProducts": [
+      {
+        "name": "Power Lift Chair Recliner | Mid-Sized | by Red Barrel Studio",
+        "revenue": 889.28,
+        "units": 1
+      },
+      {
+        "name": "Flip Arm Rolling Commode Shower Chair",
+        "revenue": 799.98,
+        "units": 2
+      },
+      {
+        "name": "Power Lift Chair Recliner | Large | by Latitude Run - Gray",
+        "revenue": 799.0,
+        "units": 1
+      }
+    ]
+  },
+  {
+    "month": "2026-02",
+    "sales": 8342.8,
+    "orderCount": 55,
+    "topProducts": [
+      {
+        "name": "Kate Farms 1.4 Case of 12",
+        "revenue": 1563.12,
+        "units": 13
+      },
+      {
+        "name": "Extra Tall Tub Transfer Bench | For Deep Tubs",
+        "revenue": 1479.9,
+        "units": 10
+      },
+      {
+        "name": "Stand Assist Transport Lift | Sara Steady alternative",
+        "revenue": 918.0,
+        "units": 2
+      }
+    ]
+  },
+  {
+    "month": "2026-03",
+    "sales": 8041.55,
+    "orderCount": 50,
+    "topProducts": [
+      {
+        "name": "Power Lift Chair Recliner | Mid-Sized | by Red Barrel Studio",
+        "revenue": 889.28,
+        "units": 1
+      },
+      {
+        "name": "In Home Assessment | Dr. Brandy Archie",
+        "revenue": 625.0,
+        "units": 5
+      },
+      {
+        "name": "Arm Compression Pumps",
+        "revenue": 499.0,
+        "units": 1
+      }
+    ]
+  },
+  {
+    "month": "2026-04",
+    "sales": 8260.8,
+    "orderCount": 61,
+    "topProducts": [
+      {
+        "name": "Power Lift Chair Recliner | Large | by Latitude Run - Brown",
+        "revenue": 1598.0,
+        "units": 2
+      },
+      {
+        "name": "Extra Tall Tub Transfer Bench | For Deep Tubs",
+        "revenue": 1038.43,
+        "units": 7
+      },
+      {
+        "name": "Ensure High Protein Chocolate Shakes 24 pk",
+        "revenue": 816.72,
+        "units": 12
+      }
+    ]
+  },
+  {
+    "month": "2026-05",
+    "sales": 6263.65,
+    "orderCount": 59,
+    "topProducts": [
+      {
+        "name": "Extra Tall Tub Transfer Bench | For Deep Tubs",
+        "revenue": 1479.9,
+        "units": 10
+      },
+      {
+        "name": "Power Lift Chair Recliner | Large | by Latitude Run - Gray",
+        "revenue": 799.0,
+        "units": 1
+      },
+      {
+        "name": "In Home Assessment | Dr. Brandy Archie",
+        "revenue": 750.0,
+        "units": 6
+      }
+    ]
+  }
+]

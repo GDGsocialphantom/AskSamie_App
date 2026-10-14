@@ -1,0 +1,12 @@
+# Copy this file to wrangler.toml and fill in your own values.
+# wrangler.toml is gitignored so your real IDs never land on GitHub.
+# NOTION_TOKEN is set separately via `wrangler secret put NOTION_TOKEN`.
+
+name = "asksamie-dashboard-api"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+[vars]
+SOCIAL_DB_ID = "PASTE_YOUR_SOCIAL_DB_ID_HERE"
+SALES_DB_ID  = "PASTE_YOUR_SALES_DB_ID_HERE"
+ALLOWED_ORIGIN = "*"   # Lock down to your Pages URL after first deploy, e.g. "https://gdgsocialphantom.github.io"

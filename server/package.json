@@ -1,0 +1,10 @@
+{
+  "name": "asksamie-dashboard-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "seed": "node seed.js"
+  }
+}

@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AskSAMIE — Growth & Sales Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root { --bg:#f8f5f0; --card:#fffcf7; --ink:#1a1814; --muted:#857d6f; --border:#e8dfd2; --accent:#c5532b; --accent-soft:#f3d9cc; --secondary:#3a4a3a; --positive:#4a7c3a; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Hanken Grotesk', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { padding: 32px 24px 80px; }
+  .container { max-width: 1280px; margin: 0 auto; }
+  header { border-bottom: 1px solid var(--border); padding-bottom: 28px; margin-bottom: 36px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  .brand-mark { font-family: 'Fraunces', serif; font-weight: 600; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  h1 { font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(32px, 4vw, 44px); line-height: 1.05; letter-spacing: -0.02em; max-width: 720px; }
+  h1 em { font-style: italic; color: var(--accent); }
+  .subtitle { color: var(--muted); margin-top: 12px; font-size: 14px; max-width: 540px; line-height: 1.5; }
+  .updated { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--positive); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 36px; overflow: hidden; }
+  .stat { background: var(--card); padding: 22px 24px; }
+  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px; }
+  .stat-value { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 500; letter-spacing: -0.02em; }
+  .stat-delta { font-size: 12px; color: var(--positive); margin-top: 4px; }
+  .stat-delta.neg { color: var(--accent); }
+  nav.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 32px; }
+  .tab-btn { background: none; border: none; padding: 14px 20px; font: inherit; font-size: 14px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s, border-color 0.15s; font-family: 'Hanken Grotesk', sans-serif; }
+  .tab-btn:hover { color: var(--ink); }
+  .tab-btn.active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .section-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; margin-bottom: 6px; letter-spacing: -0.01em; }
+  .section-sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 24px; margin-bottom: 24px; }
+  .chart-card h3 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 16px; margin-bottom: 4px; }
+  .chart-card .sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .chart-wrap { position: relative; height: 380px; }
+  .chart-wrap.small { height: 220px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  th { font-weight: 600; color: var(--muted); text-transform: uppercase; font-size: 11px; letter-spacing: 0.08em; background: var(--bg); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.total td { font-weight: 700; background: var(--accent-soft); border-top: 2px solid var(--accent); }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+  .form-card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 24px; }
+  .form-card.wide { grid-column: 1 / -1; }
+  .form-card h3 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px; margin-bottom: 4px; }
+  .form-card .help { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+  .field { margin-bottom: 14px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+  input, select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 3px; font: inherit; font-size: 14px; background: var(--bg); color: var(--ink); font-family: 'Hanken Grotesk', sans-serif; }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  input[type="file"] { padding: 0; border: none; background: none; }
+  input[type="file"]::file-selector-button { padding: 10px 16px; border: 1px solid var(--border); background: var(--bg); border-radius: 3px; font: inherit; font-size: 13px; cursor: pointer; margin-right: 12px; color: var(--ink); font-family: 'Hanken Grotesk', sans-serif; }
+  input[type="file"]::file-selector-button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--ink); color: var(--card); border: none; padding: 11px 22px; border-radius: 3px; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; letter-spacing: 0.02em; transition: background 0.15s; font-family: 'Hanken Grotesk', sans-serif; }
+  button.primary:hover { background: var(--accent); }
+  button.primary:disabled { background: var(--muted); cursor: not-allowed; }
+  button.ghost { background: transparent; border: 1px solid var(--border); padding: 6px 12px; border-radius: 3px; font: inherit; font-size: 12px; cursor: pointer; color: var(--muted); font-family: 'Hanken Grotesk', sans-serif; }
+  button.ghost:hover { color: var(--accent); border-color: var(--accent); }
+  .toast { position: fixed; bottom: 28px; right: 28px; background: var(--ink); color: var(--card); padding: 12px 18px; border-radius: 3px; font-size: 13px; opacity: 0; transform: translateY(8px); transition: opacity 0.2s, transform 0.2s; pointer-events: none; z-index: 100; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .data-table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 24px; }
+  .data-table-wrap table th:first-child, .data-table-wrap table td:first-child { padding-left: 24px; }
+  .data-table-wrap table th:last-child, .data-table-wrap table td:last-child { padding-right: 24px; }
+  .recent-entries { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 20px; max-height: 360px; overflow-y: auto; }
+  .recent-entries h4 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 14px; margin-bottom: 14px; }
+  .entry { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .entry:last-child { border-bottom: none; }
+  .entry .meta { color: var(--muted); font-size: 11px; }
+  .entry .followers { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .entry button { padding: 2px 8px; font-size: 11px; color: var(--accent); background: none; border: none; cursor: pointer; }
+  .preview-box { border: 1px solid var(--border); border-radius: 3px; background: var(--bg); padding: 18px; margin-top: 16px; }
+  .preview-box .preview-title { font-family: 'Fraunces', serif; font-weight: 500; font-size: 15px; margin-bottom: 12px; }
+  .preview-box table { font-size: 12px; }
+  .preview-box .actions { display: flex; gap: 10px; margin-top: 16px; }
+  .month-card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 22px; }
+  .month-card .m-hdr { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .month-card .m-name { font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px; }
+  .month-card .m-count { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .month-card .m-sales { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; color: var(--accent); margin-bottom: 18px; letter-spacing: -0.01em; }
+  .month-card .m-top-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+  .product-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .product-row:last-child { border-bottom: none; }
+  .product-rank { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); text-align: center; font-size: 11px; font-weight: 700; line-height: 20px; margin-right: 8px; flex-shrink: 0; }
+  .product-name { line-height: 1.3; }
+  .product-price { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; white-space: nowrap; }
+  .product-units { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .empty-state { padding: 40px 24px; text-align: center; background: var(--card); border: 1px dashed var(--border); border-radius: 4px; color: var(--muted); }
+  .account-toggles { display: flex; flex-wrap: wrap; gap: 6px 10px; padding: 14px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 16px; align-items: center; }
+  .toggles-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-right: 8px; font-weight: 600; }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; font-size: 12px; cursor: pointer; user-select: none; background: var(--bg); transition: opacity 0.15s, background 0.15s; }
+  .toggle:hover { background: var(--card); }
+  .toggle input { display: none; }
+  .toggle .toggle-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; transition: opacity 0.15s; }
+  .toggle.off { opacity: 0.4; }
+  .toggle.off .toggle-dot { opacity: 0.3; }
+  .toggle-actions { margin-left: auto; display: flex; gap: 6px; }
+  .toggle-actions button { font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; font-family: 'Hanken Grotesk', sans-serif; }
+  .toggle-actions button:hover { color: var(--accent); }
+  .chart-card.clickable { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; position: relative; }
+  .chart-card.clickable:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(197,83,43,0.08); }
+  .chart-card.clickable::after { content: 'click for data'; position: absolute; top: 22px; right: 22px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); opacity: 0; transition: opacity 0.15s; }
+  .chart-card.clickable:hover::after { opacity: 1; }
+  .modal { display: none; position: fixed; inset: 0; z-index: 1000; }
+  .modal.open { display: block; }
+  .modal-backdrop { position: absolute; inset: 0; background: rgba(26,24,20,0.55); backdrop-filter: blur(3px); animation: fadeIn 0.15s; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal-card { position: relative; max-width: 640px; width: calc(100% - 32px); margin: 5vh auto; background: var(--card); border-radius: 4px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.25); animation: slideUp 0.2s; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .modal-header { padding: 24px 28px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+  .modal-header h3 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 22px; letter-spacing: -0.01em; }
+  .modal-header .modal-sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .modal-close { background: none; border: none; font-size: 26px; line-height: 1; cursor: pointer; color: var(--muted); padding: 0; width: 32px; height: 32px; border-radius: 3px; }
+  .modal-close:hover { color: var(--accent); background: var(--bg); }
+  .modal-body { padding: 0; overflow-y: auto; flex: 1; }
+  .modal-body table { font-size: 13px; }
+  .modal-body table th:first-child, .modal-body table td:first-child { padding-left: 28px; }
+  .modal-body table th:last-child, .modal-body table td:last-child { padding-right: 28px; }
+  @media (max-width: 640px) {
+    body { padding: 20px 16px 60px; }
+    .stats { grid-template-columns: 1fr 1fr; }
+    .stat-value { font-size: 24px; }
+    .tab-btn { padding: 12px 14px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <div class="brand-mark">AskSAMIE &times; OT Connected</div>
+      <h1>Account growth &amp; <em>product sales</em>.</h1>
+      <p class="subtitle">Live dashboard tracking follower counts across content channels and Shopify revenue. Updates persist for everyone with this link.</p>
+    </div>
+    <div class="updated"><span class="pulse"></span><span id="updated-text">loading...</span></div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-view="growth">Account Growth</button>
+    <button class="tab-btn" data-view="compare">Growth vs Sales</button>
+    <button class="tab-btn" data-view="manage">Update Data</button>
+  </nav>
+
+  <div class="view active" id="view-growth">
+    <div class="section-title">All 8 accounts, followers over time</div>
+    <div class="section-sub">Every snapshot in the dataset. Toggle accounts on or off with the pills below.</div>
+    <div class="account-toggles" id="account-toggles"></div>
+    <div class="chart-card"><div class="chart-wrap"><canvas id="chart-overview"></canvas></div></div>
+    <div class="section-title" style="margin-top: 36px;">Per-account detail</div>
+    <div class="section-sub">One chart per account so each trend is readable on its own. Click any card to see the full data table.</div>
+    <div class="grid-2" id="per-account-grid"></div>
+  </div>
+
+  <div class="view" id="view-compare">
+    <div class="section-title">Monthly combined AskSAMIE followers vs. product sales</div>
+    <div class="section-sub">Combined followers across IG, LinkedIn, Facebook, and YouTube Long Form (left axis) compared with monthly Shopify revenue (right axis).</div>
+    <div class="chart-card"><div class="chart-wrap"><canvas id="chart-compare"></canvas></div></div>
+    <div class="data-table-wrap">
+      <table id="monthly-table">
+        <thead><tr><th>Month</th><th class="num">Combined followers</th><th class="num">Follower change</th><th class="num">Orders</th><th class="num">Sales</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="section-title" style="margin-top: 36px;">Top revenue-driving products by month</div>
+    <div class="section-sub">The three products that generated the most revenue each month, computed from the uploaded Shopify export.</div>
+    <div class="grid-3" id="top-products-grid"></div>
+  </div>
+
+  <div class="view" id="view-manage">
+    <div class="section-title">Add or update data</div>
+    <div class="section-sub">Anyone with this link can add a weekly social snapshot or upload a Shopify export. Changes write to Notion and sync across everyone viewing.</div>
+    <div class="form-grid">
+      <div class="form-card">
+        <h3>New social snapshot</h3>
+        <p class="help">Add the latest follower / subscriber count for one account.</p>
+        <div class="field"><label for="snap-date">Snapshot date</label><input type="date" id="snap-date"></div>
+        <div class="field"><label for="snap-account">Account</label><select id="snap-account"></select></div>
+        <div class="field"><label for="snap-followers">Total followers / subscribers</label><input type="number" id="snap-followers" min="0" placeholder="e.g. 420"></div>
+        <button class="primary" id="save-snap">Save snapshot</button>
+      </div>
+      <div class="form-card wide">
+        <h3>Upload Shopify orders export</h3>
+        <p class="help">Choose the CSV file exported from Shopify (Orders then Export). The dashboard will compute monthly sales and identify the top 3 revenue products per month. Uploaded months overwrite existing sales data for those months; other months are preserved.</p>
+        <div class="field"><label for="csv-file">Shopify orders CSV</label><input type="file" id="csv-file" accept=".csv,text/csv"></div>
+        <div id="csv-preview"></div>
+      </div>
+      <div class="recent-entries" style="grid-column: 1 / -1;">
+        <h4>Recent snapshots</h4>
+        <div id="recent-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="detail-modal">
+  <div class="modal-backdrop"></div>
+  <div class="modal-card">
+    <div class="modal-header">
+      <div><h3 id="modal-title"></h3><div class="modal-sub" id="modal-sub"></div></div>
+      <button class="modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ========================================================
+// CONFIG: Replace with your deployed Cloudflare Worker URL.
+// Example: 'https://asksamie-dashboard-api.your-subdomain.workers.dev'
+const WORKER_URL = 'https://REPLACE-ME.workers.dev';
+// ========================================================
+
+const TARGET_ACCOUNTS = ['AskSAMIE IG Content','AskSAMIE LI Content','AskSAMIE FB Content','AskSAMIE Long Form Content','Carelab Episode SEO Youtube','Carelab Audio Episode','OT Connected FB Content','OT Connected Long Form'];
+const ASKSAMIE_4 = TARGET_ACCOUNTS.slice(0, 4);
+const ACCOUNT_COLORS = {
+  'AskSAMIE IG Content':'#c5532b','AskSAMIE LI Content':'#3a4a3a','AskSAMIE FB Content':'#4a6fa5',
+  'AskSAMIE Long Form Content':'#9b4f96','Carelab Episode SEO Youtube':'#d4a017',
+  'Carelab Audio Episode':'#2e7d6b','OT Connected FB Content':'#7a4b2b','OT Connected Long Form':'#5c7a89'
+};
+const STATE = { social: [], sales: [], pendingParsed: null, hiddenAccounts: new Set() };
+
+async function api(path, opts = {}) {
+  const url = WORKER_URL.replace(/\/$/, '') + path;
+  const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  if (!r.ok) throw new Error(`API ${r.status}: ${await r.text()}`);
+  return r.json();
+}
+
+async function loadAll() {
+  try {
+    const [social, sales] = await Promise.all([api('/social'), api('/sales')]);
+    STATE.social = social;
+    STATE.sales = sales;
+  } catch (e) {
+    console.error('Load failed:', e);
+    document.body.insertAdjacentHTML('afterbegin',
+      '<div style="background:#c5532b;color:#fff;padding:14px 20px;font-family:sans-serif;font-size:14px;">Could not load data from the API. Check that WORKER_URL is set correctly in index.html and the Worker is deployed. Details in browser console.</div>');
+    throw e;
+  }
+}
+
+async function saveSnapshot(record) {
+  const saved = await api('/social', { method: 'POST', body: JSON.stringify(record) });
+  STATE.social = STATE.social.filter(r => !(r.date === record.date && r.account === record.account));
+  STATE.social.push(saved);
+  STATE.social.sort((a,b) => a.date.localeCompare(b.date) || a.account.localeCompare(b.account));
+}
+
+async function deleteSnapshot(id) {
+  await api('/social/' + encodeURIComponent(id), { method: 'DELETE' });
+  STATE.social = STATE.social.filter(r => r.id !== id);
+}
+
+async function upsertSalesRow(row) {
+  const saved = await api('/sales', { method: 'POST', body: JSON.stringify(row) });
+  STATE.sales = STATE.sales.filter(s => s.month !== row.month);
+  STATE.sales.push(saved);
+  STATE.sales.sort((a,b) => a.month.localeCompare(b.month));
+}
+
+function fmt$(n) { return '$' + Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmt$0(n) { return '$' + Math.round(Number(n)).toLocaleString(); }
+function fmtN(n) { return Number(n).toLocaleString(); }
+function monthLabel(ym) { const [y,m]=ym.split('-'); return new Date(+y,+m-1,1).toLocaleDateString(undefined,{month:'long',year:'numeric'}); }
+function monthShort(ym) { const [y,m]=ym.split('-'); return new Date(+y,+m-1,1).toLocaleDateString(undefined,{month:'short',year:'numeric'}); }
+function shortDateLabel(d) { return new Date(d+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}); }
+function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),2200); }
+
+function uniqueDates() { return [...new Set(STATE.social.map(r => r.date))].sort(); }
+function followerSeriesFor(a) { return STATE.social.filter(r => r.account === a).sort((x,y) => x.date.localeCompare(y.date)); }
+function combinedAskSAMIEByMonth() {
+  const byAM = {};
+  STATE.social.forEach(r => {
+    if (!ASKSAMIE_4.includes(r.account)) return;
+    const ym = r.date.slice(0,7); const key = r.account+'|'+ym;
+    if (!byAM[key] || byAM[key].date < r.date) byAM[key] = r;
+  });
+  const totals = {};
+  Object.values(byAM).forEach(r => { const ym=r.date.slice(0,7); totals[ym]=(totals[ym]||0)+r.followers; });
+  return totals;
+}
+function combinedMonthly() {
+  const fbm = combinedAskSAMIEByMonth();
+  const sbm = Object.fromEntries(STATE.sales.map(s => [s.month, s]));
+  const months = [...new Set([...Object.keys(fbm), ...Object.keys(sbm)])].sort();
+  return months.map(m => ({ month:m, followers:fbm[m]??null, sales:sbm[m]?.sales??0, orderCount:sbm[m]?.orderCount??null, topProducts:sbm[m]?.topProducts??[] }));
+}
+
+function parseShopifyCSV(csvText) {
+  const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+  const rows = parsed.data;
+  if (!rows.length || !('Total' in rows[0]) || !('Created at' in rows[0])) {
+    throw new Error('CSV does not look like a Shopify orders export (missing Total or Created at columns).');
+  }
+  const cancelled = new Set();
+  rows.forEach(r => { if (r['Cancelled at'] && r['Cancelled at'].trim()) cancelled.add(r.Name); });
+  const orderTotals = {};
+  rows.forEach(r => {
+    if (cancelled.has(r.Name)) return;
+    const t = parseFloat(r.Total); if (isNaN(t) || t <= 0) return;
+    if (!orderTotals[r.Name] || t > orderTotals[r.Name].total) orderTotals[r.Name] = { total: t, createdAt: r['Created at'] };
+  });
+  const monthly = {};
+  Object.values(orderTotals).forEach(o => {
+    const m = (o.createdAt || '').slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(m)) return;
+    if (!monthly[m]) monthly[m] = { sales: 0, orderCount: 0, productMap: {} };
+    monthly[m].sales += o.total; monthly[m].orderCount += 1;
+  });
+  rows.forEach(r => {
+    if (cancelled.has(r.Name)) return;
+    const m = (r['Created at'] || '').slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(m)) return;
+    const name = (r['Lineitem name'] || '').trim();
+    if (!name) return;
+    const qty = parseFloat(r['Lineitem quantity']) || 0;
+    const price = parseFloat(r['Lineitem price']) || 0;
+    const rev = qty * price; if (rev <= 0) return;
+    if (!monthly[m]) monthly[m] = { sales: 0, orderCount: 0, productMap: {} };
+    if (!monthly[m].productMap[name]) monthly[m].productMap[name] = { revenue: 0, units: 0 };
+    monthly[m].productMap[name].revenue += rev; monthly[m].productMap[name].units += qty;
+  });
+  return Object.entries(monthly).map(([month, v]) => ({
+    month, sales: Math.round(v.sales*100)/100, orderCount: v.orderCount,
+    topProducts: Object.entries(v.productMap).map(([name, x]) => ({ name, revenue: Math.round(x.revenue*100)/100, units: x.units })).sort((a,b)=>b.revenue-a.revenue).slice(0,3)
+  })).sort((a,b) => a.month.localeCompare(b.month));
+}
+
+function renderStats() {
+  const monthly = combinedMonthly();
+  const totalSales = monthly.reduce((s,m) => s+m.sales, 0);
+  const totalOrders = monthly.reduce((s,m) => s+(m.orderCount||0), 0);
+  const latestDate = uniqueDates().slice(-1)[0];
+  let latestCombined = 0;
+  ASKSAMIE_4.forEach(a => { const s = followerSeriesFor(a); if (s.length) latestCombined += s[s.length-1].followers; });
+  let earliest2026 = 0;
+  ASKSAMIE_4.forEach(a => { const s = followerSeriesFor(a).filter(r => r.date >= '2026-01-01'); if (s.length) earliest2026 += s[0].followers; });
+  const delta = latestCombined - earliest2026;
+  const stats = [
+    { label:'Combined AskSAMIE followers', value:fmtN(latestCombined), delta:(delta>=0?'+':'')+delta+' since Jan 2026', deltaPos:delta>=0 },
+    { label:'Total sales tracked', value:fmt$(totalSales), delta:totalOrders?fmtN(totalOrders)+' orders':monthly.length+' months' },
+    { label:'Snapshots logged', value:fmtN(STATE.social.length), delta:'across '+TARGET_ACCOUNTS.length+' accounts' },
+    { label:'Latest snapshot', value:latestDate?shortDateLabel(latestDate):'none', delta:latestDate?new Date(latestDate).getFullYear().toString():'' }
+  ];
+  document.getElementById('stats').innerHTML = stats.map(s => '<div class="stat"><div class="stat-label">'+s.label+'</div><div class="stat-value">'+s.value+'</div>'+(s.delta?'<div class="stat-delta '+(s.deltaPos===false?'neg':'')+'">'+s.delta+'</div>':'')+'</div>').join('');
+  document.getElementById('updated-text').textContent = 'live, last write '+new Date().toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+}
+
+const CHARTS = {};
+function destroyChart(id) { if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
+
+function renderOverview() {
+  destroyChart('overview');
+  const dates = uniqueDates();
+  const datasets = TARGET_ACCOUNTS.map(acct => {
+    const series = followerSeriesFor(acct);
+    const map = Object.fromEntries(series.map(r => [r.date, r.followers]));
+    return { label: acct, data: dates.map(d => map[d]??null), borderColor: ACCOUNT_COLORS[acct], backgroundColor: ACCOUNT_COLORS[acct], borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, spanGaps: true, tension: 0.25, hidden: STATE.hiddenAccounts.has(acct) };
+  });
+  CHARTS.overview = new Chart(document.getElementById('chart-overview'), {
+    type: 'line',
+    data: { labels: dates.map(shortDateLabel), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1a1814', padding: 10, cornerRadius: 3 } },
+      scales: { x: { ticks: { font: { family: "'Hanken Grotesk'", size: 10 }, color: '#857d6f', maxRotation: 0, autoSkipPadding: 18 }, grid: { display: false }, border: { color: '#e8dfd2' } }, y: { ticks: { font: { family: "'Hanken Grotesk'", size: 10 }, color: '#857d6f' }, grid: { color: '#e8dfd2', drawTicks: false }, border: { display: false } } }
+    }
+  });
+  renderToggles();
+}
+
+function renderToggles() {
+  const container = document.getElementById('account-toggles');
+  const pills = TARGET_ACCOUNTS.map(acct => {
+    const hidden = STATE.hiddenAccounts.has(acct);
+    return '<label class="toggle' + (hidden ? ' off' : '') + '" data-acct="' + acct + '"><input type="checkbox"' + (hidden ? '' : ' checked') + '><span class="toggle-dot" style="background: ' + ACCOUNT_COLORS[acct] + ';"></span><span>' + acct + '</span></label>';
+  }).join('');
+  container.innerHTML = '<span class="toggles-label">Show</span>' + pills + '<span class="toggle-actions"><button id="toggle-all">All</button><button id="toggle-none">None</button></span>';
+  container.querySelectorAll('.toggle input').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      const label = e.target.closest('.toggle');
+      const acct = label.dataset.acct;
+      if (e.target.checked) STATE.hiddenAccounts.delete(acct); else STATE.hiddenAccounts.add(acct);
+      label.classList.toggle('off', !e.target.checked);
+      const idx = TARGET_ACCOUNTS.indexOf(acct);
+      if (CHARTS.overview) { CHARTS.overview.setDatasetVisibility(idx, e.target.checked); CHARTS.overview.update(); }
+    });
+  });
+  document.getElementById('toggle-all').addEventListener('click', () => { STATE.hiddenAccounts.clear(); renderOverview(); });
+  document.getElementById('toggle-none').addEventListener('click', () => { TARGET_ACCOUNTS.forEach(a => STATE.hiddenAccounts.add(a)); renderOverview(); });
+}
+
+function renderPerAccount() {
+  const grid = document.getElementById('per-account-grid'); grid.innerHTML = '';
+  TARGET_ACCOUNTS.forEach((acct, i) => {
+    const series = followerSeriesFor(acct);
+    const card = document.createElement('div'); card.className = 'chart-card clickable';
+    card.addEventListener('click', () => openDetailModal(acct));
+    const safeId = 'chart-acct-' + i;
+    const latest = series.length ? series[series.length-1].followers : 'none';
+    const first = series.length ? series[0].followers : 0;
+    const change = series.length ? series[series.length-1].followers - first : 0;
+    card.innerHTML = '<h3>'+acct+'</h3><div class="sub">Latest: <strong style="color: var(--ink);">'+fmtN(latest)+'</strong> &middot; '+(change>=0?'+':'')+change+' since first snapshot</div><div class="chart-wrap small"><canvas id="'+safeId+'"></canvas></div>';
+    grid.appendChild(card);
+    destroyChart(safeId);
+    CHARTS[safeId] = new Chart(document.getElementById(safeId), {
+      type: 'line',
+      data: { labels: series.map(r => shortDateLabel(r.date)), datasets: [{ label: acct, data: series.map(r => r.followers), borderColor: ACCOUNT_COLORS[acct], backgroundColor: ACCOUNT_COLORS[acct]+'20', borderWidth: 2, fill: true, pointRadius: 0, pointHoverRadius: 4, tension: 0.25 }] },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1a1814', padding: 10, cornerRadius: 3 } }, scales: { x: { ticks: { font: { family: "'Hanken Grotesk'", size: 10 }, color: '#857d6f', maxRotation: 0, autoSkipPadding: 18 }, grid: { display: false }, border: { color: '#e8dfd2' } }, y: { ticks: { font: { family: "'Hanken Grotesk'", size: 10 }, color: '#857d6f' }, grid: { color: '#e8dfd2', drawTicks: false }, border: { display: false } } } }
+    });
+  });
+}
+
+function renderCompare() {
+  destroyChart('compare');
+  const monthly = combinedMonthly();
+  const labels = monthly.map(m => monthLabel(m.month));
+  CHARTS.compare = new Chart(document.getElementById('chart-compare'), {
+    type: 'bar',
+    data: { labels, datasets: [
+      { type:'bar', label:'Monthly sales', data:monthly.map(m => m.sales), backgroundColor:'#c5532b', borderRadius:2, yAxisID:'ySales', order:2 },
+      { type:'line', label:'Combined AskSAMIE followers', data:monthly.map(m => m.followers), borderColor:'#3a4a3a', backgroundColor:'#3a4a3a', borderWidth:2.5, pointRadius:5, pointBackgroundColor:'#3a4a3a', tension:0.2, yAxisID:'yFollowers', order:1 }
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom', labels: { font: { family: "'Hanken Grotesk', sans-serif", size: 12 }, color: '#1a1814', usePointStyle: true, boxWidth: 10, padding: 16 } }, tooltip: { backgroundColor: '#1a1814', padding: 12, cornerRadius: 3, callbacks: { label: (ctx) => ctx.dataset.label + ': ' + (ctx.dataset.yAxisID === 'ySales' ? fmt$(ctx.parsed.y) : fmtN(ctx.parsed.y) + ' followers') } } },
+      scales: {
+        x: { ticks: { font: { family: "'Hanken Grotesk'", size: 12, weight: '500' }, color: '#1a1814' }, grid: { display: false }, border: { color: '#e8dfd2' } },
+        ySales: { position: 'left', title: { display: true, text: 'Monthly sales ($)', font: { family: "'Hanken Grotesk'", size: 11 }, color: '#857d6f' }, ticks: { font: { family: "'Hanken Grotesk'", size: 10 }, color: '#857d6f', callback: v => '$' + v.toLocaleString() }, grid: { color: '#e8dfd2', drawTicks: false }, border: { display: false }, beginAtZero: true },
+        yFollowers: { position: 'right', title: { display: true, text: 'Combined followers', font: { family: "'Hanken Grotesk'", size: 11 }, color: '#857d6f' }, ticks: { font: { family: "'Hanken Grotesk'", size: 10 }, color: '#857d6f' }, grid: { display: false }, border: { display: false } }
+      }
+    }
+  });
+
+  const tbody = document.querySelector('#monthly-table tbody');
+  let prev = null, totalSales = 0, totalOrders = 0;
+  tbody.innerHTML = monthly.map(m => {
+    const delta = (prev != null && m.followers != null) ? (m.followers - prev) : null;
+    prev = m.followers ?? prev;
+    totalSales += m.sales; totalOrders += (m.orderCount || 0);
+    return '<tr><td>'+monthLabel(m.month)+'</td><td class="num">'+(m.followers!=null?fmtN(m.followers):'none')+'</td><td class="num" style="color: '+(delta!=null&&delta<0?'var(--accent)':'var(--positive)')+';">'+(delta!=null?(delta>=0?'+':'')+delta:'none')+'</td><td class="num">'+(m.orderCount!=null?fmtN(m.orderCount):'none')+'</td><td class="num">'+fmt$(m.sales)+'</td></tr>';
+  }).join('') + '<tr class="total"><td>Total</td><td class="num">none</td><td class="num">none</td><td class="num">'+fmtN(totalOrders)+'</td><td class="num">'+fmt$(totalSales)+'</td></tr>';
+
+  const tpGrid = document.getElementById('top-products-grid');
+  const withProducts = monthly.filter(m => m.topProducts && m.topProducts.length);
+  if (withProducts.length === 0) {
+    tpGrid.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1;">Upload a Shopify orders CSV under <strong>Update Data</strong> to see top revenue products by month.</div>';
+  } else {
+    tpGrid.innerHTML = withProducts.map(m => '<div class="month-card"><div class="m-hdr"><div class="m-name">'+monthShort(m.month)+'</div><div class="m-count">'+(m.orderCount||'none')+' orders</div></div><div class="m-sales">'+fmt$(m.sales)+'</div><div class="m-top-label">Top 3 revenue products</div>' + m.topProducts.map((p, i) => '<div class="product-row"><div><span class="product-rank">'+(i+1)+'</span><span class="product-name">'+p.name+'</span><div class="product-units" style="margin-left: 28px; margin-top: 2px;">'+p.units+' units</div></div><div class="product-price">'+fmt$0(p.revenue)+'</div></div>').join('') + '</div>').join('');
+  }
+}
+
+function renderManage() {
+  const sel = document.getElementById('snap-account');
+  sel.innerHTML = TARGET_ACCOUNTS.map(a => '<option value="'+a+'">'+a+'</option>').join('');
+  document.getElementById('snap-date').valueAsDate = new Date();
+  renderRecentList();
+}
+
+function renderRecentList() {
+  const list = document.getElementById('recent-list');
+  const recent = [...STATE.social].sort((a,b) => b.date.localeCompare(a.date)).slice(0, 30);
+  list.innerHTML = recent.map(r => '<div class="entry"><div><div>'+r.account+'</div><div class="meta">'+shortDateLabel(r.date)+' '+new Date(r.date).getFullYear()+'</div></div><div style="display: flex; align-items: center; gap: 10px;"><div class="followers">'+fmtN(r.followers)+'</div><button data-id="'+(r.id||'')+'" class="del-snap">delete</button></div></div>').join('');
+  list.querySelectorAll('.del-snap').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const id = e.target.dataset.id;
+      if (!id) return;
+      e.target.disabled = true;
+      try { await deleteSnapshot(id); toast('Snapshot deleted'); renderAll(); }
+      catch (err) { console.error(err); toast('Delete failed'); e.target.disabled = false; }
+    });
+  });
+}
+
+function renderAll() { renderStats(); renderOverview(); renderPerAccount(); renderCompare(); renderRecentList(); }
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-' + btn.dataset.view).classList.add('active');
+    setTimeout(() => Object.values(CHARTS).forEach(c => c.resize()), 50);
+  });
+});
+
+document.getElementById('save-snap').addEventListener('click', async () => {
+  const date = document.getElementById('snap-date').value;
+  const account = document.getElementById('snap-account').value;
+  const followers = parseInt(document.getElementById('snap-followers').value, 10);
+  if (!date || !account || isNaN(followers)) { toast('Fill all fields'); return; }
+  const btn = document.getElementById('save-snap');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    await saveSnapshot({ date, account, followers });
+    document.getElementById('snap-followers').value = '';
+    toast('Snapshot saved');
+    renderAll();
+  } catch (err) { console.error(err); toast('Save failed'); }
+  finally { btn.disabled = false; btn.textContent = 'Save snapshot'; }
+});
+
+document.getElementById('csv-file').addEventListener('change', (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const previewDiv = document.getElementById('csv-preview');
+  previewDiv.innerHTML = '<div class="preview-box"><div class="preview-title">Parsing...</div></div>';
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const parsed = parseShopifyCSV(ev.target.result);
+      if (!parsed.length) { previewDiv.innerHTML = '<div class="preview-box" style="border-color: var(--accent);"><div class="preview-title" style="color: var(--accent);">No orders found in this CSV.</div></div>'; return; }
+      STATE.pendingParsed = parsed;
+      const totalSales = parsed.reduce((s,m) => s+m.sales, 0);
+      const totalOrders = parsed.reduce((s,m) => s+m.orderCount, 0);
+      const monthList = parsed.map(m => monthLabel(m.month)).join(', ');
+      previewDiv.innerHTML =
+        '<div class="preview-box"><div class="preview-title">Preview, ready to save</div>' +
+        '<p style="font-size: 13px; color: var(--muted); margin-bottom: 14px;">Found <strong style="color: var(--ink);">'+fmtN(totalOrders)+'</strong> orders totaling <strong style="color: var(--ink);">'+fmt$(totalSales)+'</strong> across '+parsed.length+' month'+(parsed.length!==1?'s':'')+': '+monthList+'.</p>' +
+        '<table><thead><tr><th>Month</th><th class="num">Orders</th><th class="num">Sales</th><th>Top product</th></tr></thead><tbody>' +
+        parsed.map(m => '<tr><td>'+monthShort(m.month)+'</td><td class="num">'+m.orderCount+'</td><td class="num">'+fmt$(m.sales)+'</td><td style="font-size: 11px; color: var(--muted);">'+(m.topProducts[0]?.name||'none')+'</td></tr>').join('') +
+        '</tbody></table>' +
+        '<div class="actions"><button class="primary" id="confirm-csv">Save all '+parsed.length+' month'+(parsed.length!==1?'s':'')+'</button><button class="ghost" id="cancel-csv">Cancel</button></div></div>';
+      document.getElementById('confirm-csv').addEventListener('click', saveParsedSales);
+      document.getElementById('cancel-csv').addEventListener('click', () => { STATE.pendingParsed = null; previewDiv.innerHTML = ''; document.getElementById('csv-file').value = ''; });
+    } catch (err) {
+      previewDiv.innerHTML = '<div class="preview-box" style="border-color: var(--accent);"><div class="preview-title" style="color: var(--accent);">Could not parse this file</div><p style="font-size: 13px; color: var(--muted);">'+err.message+'</p></div>';
+    }
+  };
+  reader.onerror = () => { previewDiv.innerHTML = '<div class="preview-box" style="border-color: var(--accent);"><div class="preview-title" style="color: var(--accent);">Could not read file</div></div>'; };
+  reader.readAsText(file);
+});
+
+async function saveParsedSales() {
+  if (!STATE.pendingParsed) return;
+  const btn = document.getElementById('confirm-csv');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+  try {
+    for (let i = 0; i < STATE.pendingParsed.length; i++) {
+      const row = STATE.pendingParsed[i];
+      if (btn) btn.textContent = 'Saving ' + (i+1) + '/' + STATE.pendingParsed.length + '...';
+      await upsertSalesRow(row);
+    }
+    toast('Saved '+STATE.pendingParsed.length+' month'+(STATE.pendingParsed.length!==1?'s':'')+' of sales');
+    STATE.pendingParsed = null;
+    document.getElementById('csv-preview').innerHTML = '';
+    document.getElementById('csv-file').value = '';
+    renderAll();
+    document.querySelector('.tab-btn[data-view="compare"]').click();
+  } catch (err) {
+    console.error(err); toast('Save failed, check console');
+    if (btn) { btn.disabled = false; btn.textContent = 'Retry save'; }
+  }
+}
+
+function openDetailModal(account) {
+  const series = followerSeriesFor(account);
+  const modal = document.getElementById('detail-modal');
+  document.getElementById('modal-title').textContent = account;
+  const first = series.length ? series[0].followers : 0;
+  const latest = series.length ? series[series.length-1].followers : 0;
+  const change = latest - first;
+  const changeColor = change >= 0 ? 'var(--positive)' : 'var(--accent)';
+  document.getElementById('modal-sub').innerHTML = series.length + ' snapshots &middot; ' + fmtN(first) + ' to ' + fmtN(latest) + ' <span style="color: ' + changeColor + ';">(' + (change >= 0 ? '+' : '') + change + ')</span>';
+  const desc = [...series].reverse();
+  let rows = '';
+  for (let i = 0; i < desc.length; i++) {
+    const r = desc[i];
+    const prev = desc[i + 1];
+    const delta = prev ? (r.followers - prev.followers) : null;
+    const deltaColor = delta == null ? 'var(--muted)' : (delta > 0 ? 'var(--positive)' : delta < 0 ? 'var(--accent)' : 'var(--muted)');
+    const deltaText = delta == null ? 'none' : (delta > 0 ? '+' : '') + delta;
+    const date = new Date(r.date + 'T00:00:00');
+    const dateLabel = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    rows += '<tr><td>' + dateLabel + '</td><td class="num">' + fmtN(r.followers) + '</td><td class="num" style="color: ' + deltaColor + ';">' + deltaText + '</td></tr>';
+  }
+  document.getElementById('modal-body').innerHTML =
+    '<table><thead><tr><th>Date</th><th class="num">Followers</th><th class="num">Change</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  modal.classList.add('open');
+}
+
+function closeDetailModal() { document.getElementById('detail-modal').classList.remove('open'); }
+document.querySelector('#detail-modal .modal-close').addEventListener('click', closeDetailModal);
+document.querySelector('#detail-modal .modal-backdrop').addEventListener('click', closeDetailModal);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetailModal(); });
+
+(async function init() {
+  try {
+    await loadAll();
+    renderManage();
+    renderAll();
+  } catch (e) { /* loadAll already surfaced the error */ }
+})();
+</script>
+</body>
+</html>

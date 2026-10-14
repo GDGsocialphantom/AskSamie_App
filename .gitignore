@@ -1,0 +1,19 @@
+# Real Cloudflare Worker config (contains your Notion DB IDs).
+# server/wrangler.example.toml IS committed as a template.
+server/wrangler.toml
+
+# Wrangler local state
+server/.wrangler/
+.wrangler/
+
+# Node
+node_modules/
+server/node_modules/
+package-lock.json
+server/package-lock.json
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
