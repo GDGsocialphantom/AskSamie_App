@@ -2,11 +2,17 @@
 // Handles CORS + auth + schema translation so the browser can talk to Notion
 // without ever seeing the Notion token.
 //
-// Required env vars (set in wrangler.toml for non-secrets, wrangler secret for NOTION_TOKEN):
+// Required env vars (set in Cloudflare dashboard; NOTION_TOKEN as Secret):
 //   NOTION_TOKEN     secret_XXX or ntn_XXX from your Notion integration
-//   SOCIAL_DB_ID     database ID for Social Snapshots
-//   SALES_DB_ID      database ID for Monthly Sales
-//   ALLOWED_ORIGIN   e.g. https://gdgsocialphantom.github.io  (or "*" while testing)
+//   SOCIAL_DB_ID     database ID for the Social Media Channel Growth Tracker
+//   SALES_DB_ID      (optional) database ID for Monthly Sales. If unset, sales endpoints return empty.
+//   ALLOWED_ORIGIN   e.g. https://asksamie-app.pages.dev  (or "*" while testing)
+//
+// Schema the Worker reads from the social database:
+//   Snapshot      Title
+//   Date          Date
+//   Account       Select (one of the 8 account names)
+//   Subscribers   Number (treated as "followers" in the dashboard)
 
 const NOTION_API = 'https://api.notion.com/v1';
 const NOTION_VERSION = '2022-06-28';
@@ -82,6 +88,9 @@ async function queryAll(dbId, filter, env) {
 }
 
 // ===== Social Snapshots =====
+// Reads from Brandy's existing Social Media Channel Growth Tracker database.
+// Property names:  Snapshot (title), Date, Account (select), Subscribers (number).
+// The dashboard calls this value "followers" for display consistency.
 async function getSocial(env) {
   const pages = await queryAll(env.SOCIAL_DB_ID, null, env);
   return pages
@@ -91,7 +100,7 @@ async function getSocial(env) {
         id: page.id,
         date: p.Date?.date?.start,
         account: p.Account?.select?.name,
-        followers: p.Followers?.number ?? 0,
+        followers: p.Subscribers?.number ?? 0,
       };
     })
     .filter(r => r.date && r.account)
@@ -114,10 +123,10 @@ async function addSocial({ date, account, followers }, env) {
   const created = await notionFetch('/pages', 'POST', {
     parent: { database_id: env.SOCIAL_DB_ID },
     properties: {
-      'Name': { title: [{ text: { content: `${account} — ${date}` } }] },
+      'Snapshot': { title: [{ text: { content: `${account} — ${date}` } }] },
       'Date': { date: { start: date } },
       'Account': { select: { name: account } },
-      'Followers': { number: Number(followers) },
+      'Subscribers': { number: Number(followers) },
     },
   }, env);
   return { id: created.id, date, account, followers: Number(followers) };
@@ -129,7 +138,10 @@ async function archivePage(id, env) {
 }
 
 // ===== Monthly Sales =====
+// Sales database is optional. If SALES_DB_ID isn't set, return empty data
+// so the dashboard just shows "no sales configured" state and keeps working.
 async function getSales(env) {
+  if (!env.SALES_DB_ID) return [];
   const pages = await queryAll(env.SALES_DB_ID, null, env);
   return pages
     .map(page => {
@@ -151,6 +163,7 @@ async function getSales(env) {
 }
 
 async function upsertSales({ month, sales, orderCount, topProducts }, env) {
+  if (!env.SALES_DB_ID) throw new Error('SALES_DB_ID not configured — create a Monthly Sales database in Notion and set the env var');
   if (!/^\d{4}-\d{2}$/.test(month)) throw new Error('Month must be YYYY-MM');
   const props = {
     'Month': { title: [{ text: { content: month } }] },
