@@ -165,6 +165,9 @@
   <div class="view" id="view-compare">
     <div class="section-title">Monthly combined AskSAMIE followers vs. product sales</div>
     <div class="section-sub">Combined followers across IG, LinkedIn, Facebook, and YouTube Long Form (left axis) compared with monthly Shopify revenue (right axis).</div>
+    <div id="sales-ephemeral-banner" style="display: none; background: #f3d9cc; border: 1px solid #c5532b; color: #1a1814; padding: 12px 16px; border-radius: 4px; margin-bottom: 16px; font-size: 13px;">
+      <strong>Session only.</strong> Sales data isn't persisted to Notion yet (Monthly Sales database not configured). Re-upload the Shopify CSV each time you refresh. To make this permanent, see <code>DEPLOYMENT.md</code> for setting up <code>SALES_DB_ID</code>.
+    </div>
     <div class="chart-card"><div class="chart-wrap"><canvas id="chart-compare"></canvas></div></div>
     <div class="data-table-wrap">
       <table id="monthly-table">
@@ -264,11 +267,29 @@ async function deleteSnapshot(id) {
   STATE.social = STATE.social.filter(r => r.id !== id);
 }
 
+// Monthly sales persistence:
+// When the Worker has SALES_DB_ID set + the Monthly Sales Notion database exists,
+// sales data persists in Notion automatically — no code change needed.
+// Until then, we fall back to in-browser state (lost on refresh, re-upload CSV each session).
 async function upsertSalesRow(row) {
-  const saved = await api('/sales', { method: 'POST', body: JSON.stringify(row) });
-  STATE.sales = STATE.sales.filter(s => s.month !== row.month);
-  STATE.sales.push(saved);
-  STATE.sales.sort((a,b) => a.month.localeCompare(b.month));
+  try {
+    const saved = await api('/sales', { method: 'POST', body: JSON.stringify(row) });
+    STATE.sales = STATE.sales.filter(s => s.month !== row.month);
+    STATE.sales.push(saved);
+    STATE.sales.sort((a,b) => a.month.localeCompare(b.month));
+    STATE.salesEphemeral = false;
+  } catch (err) {
+    const msg = String(err && err.message || err);
+    if (/SALES_DB_ID/.test(msg)) {
+      // Notion sales database isn't configured yet. Fall back to in-browser only.
+      STATE.sales = STATE.sales.filter(s => s.month !== row.month);
+      STATE.sales.push(row);
+      STATE.sales.sort((a,b) => a.month.localeCompare(b.month));
+      STATE.salesEphemeral = true;
+    } else {
+      throw err;
+    }
+  }
 }
 
 function fmt$(n) { return '$' + Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -485,7 +506,11 @@ function renderRecentList() {
   });
 }
 
-function renderAll() { renderStats(); renderOverview(); renderPerAccount(); renderCompare(); renderRecentList(); }
+function renderAll() {
+  renderStats(); renderOverview(); renderPerAccount(); renderCompare(); renderRecentList();
+  const banner = document.getElementById('sales-ephemeral-banner');
+  if (banner) banner.style.display = STATE.salesEphemeral ? 'block' : 'none';
+}
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -553,7 +578,9 @@ async function saveParsedSales() {
       if (btn) btn.textContent = 'Saving ' + (i+1) + '/' + STATE.pendingParsed.length + '...';
       await upsertSalesRow(row);
     }
-    toast('Saved '+STATE.pendingParsed.length+' month'+(STATE.pendingParsed.length!==1?'s':'')+' of sales');
+    toast(STATE.salesEphemeral
+      ? 'Loaded ' + STATE.pendingParsed.length + ' month' + (STATE.pendingParsed.length !== 1 ? 's' : '') + ' (session only, re-upload after refresh)'
+      : 'Saved ' + STATE.pendingParsed.length + ' month' + (STATE.pendingParsed.length !== 1 ? 's' : '') + ' of sales');
     STATE.pendingParsed = null;
     document.getElementById('csv-preview').innerHTML = '';
     document.getElementById('csv-file').value = '';

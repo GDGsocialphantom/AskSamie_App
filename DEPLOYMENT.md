@@ -64,6 +64,20 @@ cp wrangler.example.toml wrangler.toml
 
 You now have three secrets: **NOTION_TOKEN**, **SOCIAL_DB_ID**, **SALES_DB_ID**.
 
+### Adding Monthly Sales later (if you skipped 1c)
+
+If the dashboard is up but you deferred the Monthly Sales database and now want to add it:
+
+1. In Notion: create a new full-page database called `Monthly Sales` with the columns from 1c above
+2. Connect the `AskSAMIE Dashboard` integration to it (**...** menu → Connections)
+3. Copy the database ID from the URL
+4. In Cloudflare → asksamie-dashboard-api → Settings → Variables and Secrets, add:
+   - Name: `SALES_DB_ID`
+   - Value: the database ID
+   - Type: Text
+5. Save. No Worker redeploy needed, variables apply on next request.
+6. Reload the dashboard, upload a Shopify CSV. Save now persists to Notion instead of session-only. The orange "Session only" banner disappears.
+
 ---
 
 ## Part 2: Deploy the Cloudflare Worker
