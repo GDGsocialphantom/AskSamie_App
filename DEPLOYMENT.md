@@ -60,23 +60,32 @@ cp wrangler.example.toml wrangler.toml
 | Top Products | Text   | Stores JSON; dashboard renders it visually. Don't hand-edit this. |
 
 5. **...** menu, **Connections**, connect to `AskSAMIE Dashboard`.
-6. Copy this database's ID from its URL. This is your **SALES_DB_ID**.
+You now have two secrets: **NOTION_TOKEN** and **SOCIAL_DB_ID**. Monthly sales is stored in Cloudflare KV, not Notion (see "Enabling sales persistence (Cloudflare KV)" below for the one-time setup).
 
-You now have three secrets: **NOTION_TOKEN**, **SOCIAL_DB_ID**, **SALES_DB_ID**.
+### Enabling sales persistence (Cloudflare KV)
 
-### Adding Monthly Sales later (if you skipped 1c)
+The dashboard stores Shopify sales data in a Cloudflare KV namespace, not Notion. One-time setup, about 5 minutes:
 
-If the dashboard is up but you deferred the Monthly Sales database and now want to add it:
+1. **Create the KV namespace**
+   - Cloudflare dashboard → **Storage & Databases** → **KV**
+   - Click **Create instance** (or **Create a namespace**)
+   - Name: `asksamie-sales` (anything works)
+   - Click **Add**
 
-1. In Notion: create a new full-page database called `Monthly Sales` with the columns from 1c above
-2. Connect the `AskSAMIE Dashboard` integration to it (**...** menu → Connections)
-3. Copy the database ID from the URL
-4. In Cloudflare → asksamie-dashboard-api → Settings → Variables and Secrets, add:
-   - Name: `SALES_DB_ID`
-   - Value: the database ID
-   - Type: Text
-5. Save. No Worker redeploy needed, variables apply on next request.
-6. Reload the dashboard, upload a Shopify CSV. Save now persists to Notion instead of session-only. The orange "Session only" banner disappears.
+2. **Bind the namespace to the Worker**
+   - Go to **Workers & Pages** → **asksamie-dashboard-api**
+   - **Settings** tab → **Bindings** section → **Add**
+   - Type: **KV Namespace**
+   - Variable name: `SALES_KV` (exact spelling, this is what the Worker code reads)
+   - KV namespace: pick the one you just created
+   - Click **Deploy** or **Save**
+
+3. **Test it**
+   - Reload the dashboard, upload a Shopify CSV
+   - "Session only" banner should disappear
+   - Refresh the page — sales data persists
+
+Everyone with the dashboard link sees the same sales data. If you ever want to clear it, open the KV namespace in Cloudflare and delete the `sales` key.
 
 ---
 

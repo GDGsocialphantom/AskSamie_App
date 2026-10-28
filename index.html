@@ -166,7 +166,7 @@
     <div class="section-title">Monthly combined AskSAMIE followers vs. product sales</div>
     <div class="section-sub">Combined followers across IG, LinkedIn, Facebook, and YouTube Long Form (left axis) compared with monthly Shopify revenue (right axis).</div>
     <div id="sales-ephemeral-banner" style="display: none; background: #f3d9cc; border: 1px solid #c5532b; color: #1a1814; padding: 12px 16px; border-radius: 4px; margin-bottom: 16px; font-size: 13px;">
-      <strong>Session only.</strong> Sales data isn't persisted to Notion yet (Monthly Sales database not configured). Re-upload the Shopify CSV each time you refresh. To make this permanent, see <code>DEPLOYMENT.md</code> for setting up <code>SALES_DB_ID</code>.
+      <strong>Session only.</strong> Sales data isn't persisted yet (SALES_KV namespace not bound to the Worker). Re-upload the Shopify CSV each time you refresh. To make this permanent, see <code>DEPLOYMENT.md</code> for the KV setup steps.
     </div>
     <div class="chart-card"><div class="chart-wrap"><canvas id="chart-compare"></canvas></div></div>
     <div class="data-table-wrap">
@@ -280,7 +280,7 @@ async function upsertSalesRow(row) {
     STATE.salesEphemeral = false;
   } catch (err) {
     const msg = String(err && err.message || err);
-    if (/SALES_DB_ID/.test(msg)) {
+    if (/SALES_(DB_ID|KV)/.test(msg)) {
       // Notion sales database isn't configured yet. Fall back to in-browser only.
       STATE.sales = STATE.sales.filter(s => s.month !== row.month);
       STATE.sales.push(row);

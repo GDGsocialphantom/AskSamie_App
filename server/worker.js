@@ -5,8 +5,12 @@
 // Required env vars (set in Cloudflare dashboard; NOTION_TOKEN as Secret):
 //   NOTION_TOKEN     secret_XXX or ntn_XXX from your Notion integration
 //   SOCIAL_DB_ID     database ID for the Social Media Channel Growth Tracker
-//   SALES_DB_ID      (optional) database ID for Monthly Sales. If unset, sales endpoints return empty.
 //   ALLOWED_ORIGIN   e.g. https://asksamie-app.pages.dev  (or "*" while testing)
+//
+// Bindings (set under Settings → Bindings in Cloudflare):
+//   SALES_KV         KV namespace storing monthly sales as a single JSON blob.
+//                    If unbound, sales endpoints return empty and the dashboard
+//                    falls back to session-only sales.
 //
 // Schema the Worker reads from the social database:
 //   Snapshot      Title
@@ -138,56 +142,38 @@ async function archivePage(id, env) {
 }
 
 // ===== Monthly Sales =====
-// Sales database is optional. If SALES_DB_ID isn't set, return empty data
-// so the dashboard just shows "no sales configured" state and keeps working.
+// Stored in Cloudflare KV under a single key "sales" as a JSON array.
+// Bind a KV namespace to the Worker as SALES_KV. If unbound, returns empty
+// and writes fall back to session-only (handled by the dashboard).
+const SALES_KEY = 'sales';
+
+async function readSalesArray(env) {
+  const raw = await env.SALES_KV.get(SALES_KEY);
+  if (!raw) return [];
+  try { return JSON.parse(raw); } catch (_) { return []; }
+}
+
 async function getSales(env) {
-  if (!env.SALES_DB_ID) return [];
-  const pages = await queryAll(env.SALES_DB_ID, null, env);
-  return pages
-    .map(page => {
-      const p = page.properties;
-      const month = p.Month?.title?.[0]?.plain_text?.trim();
-      const topRaw = p['Top Products']?.rich_text?.map(t => t.plain_text).join('') || '';
-      let topProducts = [];
-      try { topProducts = topRaw ? JSON.parse(topRaw) : []; } catch (_) {}
-      return {
-        id: page.id,
-        month,
-        sales: p.Sales?.number ?? 0,
-        orderCount: p['Order Count']?.number ?? 0,
-        topProducts,
-      };
-    })
-    .filter(r => /^\d{4}-\d{2}$/.test(r.month))
+  if (!env.SALES_KV) return [];
+  const all = await readSalesArray(env);
+  return all
+    .filter(r => r && /^\d{4}-\d{2}$/.test(r.month))
     .sort((a, b) => a.month.localeCompare(b.month));
 }
 
 async function upsertSales({ month, sales, orderCount, topProducts }, env) {
-  if (!env.SALES_DB_ID) throw new Error('SALES_DB_ID not configured — create a Monthly Sales database in Notion and set the env var');
+  if (!env.SALES_KV) throw new Error('SALES_KV not bound — create a KV namespace in Cloudflare and bind it to this Worker as SALES_KV');
   if (!/^\d{4}-\d{2}$/.test(month)) throw new Error('Month must be YYYY-MM');
-  const props = {
-    'Month': { title: [{ text: { content: month } }] },
-    'Sales': { number: Number(sales) || 0 },
-    'Order Count': { number: Number(orderCount) || 0 },
-    'Top Products': {
-      rich_text: [{ text: { content: JSON.stringify(topProducts || []).slice(0, 1900) } }],
-    },
+  const all = await readSalesArray(env);
+  const row = {
+    month,
+    sales: Number(sales) || 0,
+    orderCount: Number(orderCount) || 0,
+    topProducts: Array.isArray(topProducts) ? topProducts : [],
   };
-  const existing = await queryAll(env.SALES_DB_ID, {
-    property: 'Month', title: { equals: month },
-  }, env);
-  if (existing.length) {
-    const first = existing[0];
-    for (const dupe of existing.slice(1)) {
-      await notionFetch(`/pages/${dupe.id}`, 'PATCH', { archived: true }, env);
-    }
-    await notionFetch(`/pages/${first.id}`, 'PATCH', { properties: props }, env);
-    return { id: first.id, month, sales, orderCount, topProducts };
-  } else {
-    const created = await notionFetch('/pages', 'POST', {
-      parent: { database_id: env.SALES_DB_ID },
-      properties: props,
-    }, env);
-    return { id: created.id, month, sales, orderCount, topProducts };
-  }
+  const idx = all.findIndex(s => s && s.month === month);
+  if (idx >= 0) all[idx] = row; else all.push(row);
+  all.sort((a, b) => a.month.localeCompare(b.month));
+  await env.SALES_KV.put(SALES_KEY, JSON.stringify(all));
+  return row;
 }
