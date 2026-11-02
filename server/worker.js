@@ -111,8 +111,33 @@ async function getSocial(env) {
     .sort((a, b) => a.date.localeCompare(b.date) || a.account.localeCompare(b.account));
 }
 
+// Cache the current Account select options for the lifetime of this Worker
+// instance so we don't fetch the schema on every write.
+let _accountOptionsCache = null;
+
+async function ensureAccountOption(accountName, env) {
+  // Load schema once, cache the known Select options.
+  if (!_accountOptionsCache) {
+    const db = await notionFetch(`/databases/${env.SOCIAL_DB_ID}`, 'GET', null, env);
+    const prop = db.properties && db.properties.Account;
+    if (!prop || prop.type !== 'select') return; // if the column isn't a select, nothing to patch
+    _accountOptionsCache = (prop.select.options || []).slice();
+  }
+  if (_accountOptionsCache.some(o => o.name === accountName)) return;
+  // Add the missing option by PATCHing the database schema.
+  const next = _accountOptionsCache.concat([{ name: accountName }]);
+  const updated = await notionFetch(`/databases/${env.SOCIAL_DB_ID}`, 'PATCH', {
+    properties: { Account: { select: { options: next } } },
+  }, env);
+  const updatedOpts = updated?.properties?.Account?.select?.options;
+  _accountOptionsCache = updatedOpts ? updatedOpts.slice() : next;
+}
+
 async function addSocial({ date, account, followers }, env) {
   if (!date || !account || followers == null) throw new Error('Missing date, account, or followers');
+
+  // Make sure the Account select has this option before trying to write it.
+  await ensureAccountOption(account, env);
 
   const existing = await queryAll(env.SOCIAL_DB_ID, {
     and: [
