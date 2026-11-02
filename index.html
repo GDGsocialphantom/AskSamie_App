@@ -137,7 +137,7 @@
 <div class="container">
   <header>
     <div>
-      <div class="brand-mark">AskSAMIE &times; OT Connected</div>
+      <div class="brand-mark">AskSAMIE &times; AskSAMIE Pro</div>
       <h1>Account growth &amp; <em>product sales</em>.</h1>
       <p class="subtitle">Live dashboard tracking follower counts across content channels and Shopify revenue. Updates persist for everyone with this link.</p>
     </div>
@@ -226,12 +226,15 @@
 const WORKER_URL = 'https://asksamie-dashboard-api.gwen-031.workers.dev';
 // ========================================================
 
-const TARGET_ACCOUNTS = ['AskSAMIE IG Content','AskSAMIE LI Content','AskSAMIE FB Content','AskSAMIE Long Form Content','Carelab Episode SEO Youtube','Carelab Audio Episode','OT Connected FB Content','OT Connected Long Form'];
+const TARGET_ACCOUNTS = ['AskSAMIE IG Content','AskSAMIE LI Content','AskSAMIE FB Content','AskSAMIE Long Form Content',"There's an OT for That Episode SEO Youtube","There's an OT for That Audio Episode",'AskSAMIE Pro FB Content','AskSAMIE Pro Long Form'];
 const ASKSAMIE_4 = TARGET_ACCOUNTS.slice(0, 4);
 const ACCOUNT_COLORS = {
   'AskSAMIE IG Content':'#c5532b','AskSAMIE LI Content':'#3a4a3a','AskSAMIE FB Content':'#4a6fa5',
-  'AskSAMIE Long Form Content':'#9b4f96','Carelab Episode SEO Youtube':'#d4a017',
-  'Carelab Audio Episode':'#2e7d6b','OT Connected FB Content':'#7a4b2b','OT Connected Long Form':'#5c7a89'
+  'AskSAMIE Long Form Content':'#9b4f96',
+  "There's an OT for That Episode SEO Youtube":'#d4a017',
+  "There's an OT for That Audio Episode":'#2e7d6b',
+  'AskSAMIE Pro FB Content':'#7a4b2b',
+  'AskSAMIE Pro Long Form':'#5c7a89'
 };
 const STATE = { social: [], sales: [], pendingParsed: null, hiddenAccounts: new Set() };
 
